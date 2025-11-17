@@ -1,25 +1,43 @@
 #version 450
 
-// доп. 1: Добавлен атрибут цвета
+
+//входные данные
 layout (location = 0) in vec3 v_position;
-layout (location = 1) in vec3 v_color;
+layout (location = 1) in vec3 v_normal;
+layout (location = 2) in vec2 v_uv;
 
-// доп.1: Цвет передается во fragment shader для интерполяции
-layout (location = 0) out vec3 frag_color;
+//в фрагментный шейдер
+layout (location = 0) out vec3 f_position;
+layout (location = 1) out vec3 f_normal;
+layout (location = 2) out vec2 f_uv;
+layout (location = 3) out vec3 f_view_pos;
 
-// Push constants больше не содержат цвет
-layout (push_constant, std430) uniform ShaderConstants {
-    mat4 projection;
-    mat4 transform;
+//сцена
+layout (binding = 0, std140) uniform SceneUniforms {
+    mat4 view_projection;
+    vec3 view_pos;
+};
+
+layout (binding = 1, std140) uniform ModelUniforms {
+    mat4 model;
+    vec3 albedo_color;
+    float shininess;
+    vec3 specular_color;
 };
 
 void main() {
-    vec4 point = vec4(v_position, 1.0f);
-    vec4 transformed = transform * point;
-    vec4 projected = projection * transformed;
+    //трансформация позиции
+    vec4 position = model * vec4(v_position, 1.0f);
+    //трансформации нормали
+    mat3 normal_matrix = transpose(inverse(mat3(model)));
+    vec3 normal = normal_matrix * v_normal;
 
-    gl_Position = projected;
+    //финальная позиция в экранных коорд
+    gl_Position = view_projection * position;
 
-    // доп. 1: Передаем цвет для интерполяции между вершинами
-    frag_color = v_color;
+    //передача в фрагментный шейдер
+    f_position = position.xyz;
+    f_normal = normal;
+    f_uv = v_uv;
+    f_view_pos = view_pos;
 }
